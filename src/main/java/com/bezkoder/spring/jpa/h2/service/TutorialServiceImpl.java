@@ -1,26 +1,42 @@
 package com.bezkoder.spring.jpa.h2.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import com.bezkoder.spring.jpa.h2.model.Tutorial;
 import com.bezkoder.spring.jpa.h2.repository.TutorialRepository;
-
-import jakarta.persistence.LockModeType;
 
 @Service
 public class TutorialServiceImpl implements TutorialService {
 
 	@Autowired
 	TutorialRepository tutorialRepository;
-
+	
+	@Autowired
+	RestTemplate restTemplate; 
+	
 	@Override
-	public List<Tutorial> findByPublished(boolean published) {
-		return tutorialRepository.findByPublished(published);
+	@Async
+	public CompletableFuture<List<Tutorial>> findByPublished(boolean published) {
+		try {
+			Thread.sleep(10000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}	
+		List<Tutorial> byPublished = tutorialRepository.findByPublished(published);
+		return CompletableFuture.completedFuture(byPublished);
 	}
 
 	@Override
@@ -62,4 +78,23 @@ public class TutorialServiceImpl implements TutorialService {
 		tutorialRepository.deleteAll();
 	}
 
+	public List<Tutorial> getTutorialEditHistory(long postID) {
+		
+		List<Tutorial> historyList = new ArrayList<Tutorial>();
+		
+		tutorialRepository.findRevisions(postID).get().forEach(x -> {
+			x.getEntity().setEditVersion(x.getMetadata());
+			historyList.add(x.getEntity());
+		});
+		
+		return historyList;
+	}
+
+	@Override
+	public CompletableFuture<ResponseEntity<List<Tutorial>>> findByPublishedExternal(boolean b) {
+		ResponseEntity<CompletableFuture<ResponseEntity<List<Tutorial>>>> forObject = this.restTemplate.
+				exchange("http://localhost:8080/api/tutorials/published",HttpMethod.GET, null, new ParameterizedTypeReference<CompletableFuture<ResponseEntity<List<Tutorial>>>>() {});
+		return forObject.getBody();
+	}
+	
 }

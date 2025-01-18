@@ -3,11 +3,13 @@ package com.bezkoder.spring.jpa.h2.controller;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -113,17 +115,17 @@ public class TutorialController {
 	}
 
 	@GetMapping("/tutorials/published")
-	public ResponseEntity<List<Tutorial>> findByPublished() {
-		try {
-			List<Tutorial> tutorials = tutorialService.findByPublished(true);
-
-			if (tutorials.isEmpty()) {
-				return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-			}
-			return new ResponseEntity<>(tutorials, HttpStatus.OK);
-		} catch (Exception e) {
-			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-		}
+	public CompletableFuture<ResponseEntity<List<Tutorial>>> findByPublished() {
+		CompletableFuture<ResponseEntity<List<Tutorial>>> completableFuture = tutorialService.findByPublished(true).thenApply(ResponseEntity::ok);
+		System.out.println("service triggeres");
+		return completableFuture;
+	}
+	
+	@GetMapping("/tutorials/published-external")
+	public CompletableFuture<ResponseEntity<List<Tutorial>>> findByPublishedExternal() {
+		CompletableFuture<ResponseEntity<List<Tutorial>>> completableFuture = tutorialService.findByPublishedExternal(true);
+		System.out.println("external api was triggered");
+		return completableFuture;
 	}
 
 }
